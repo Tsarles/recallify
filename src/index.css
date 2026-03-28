@@ -1,0 +1,301 @@
+/* ============================================================
+   RECALLIFY — Design System v3 (Quicksand + Poppins)
+   ============================================================ */
+
+:root {
+  --paper:        #faf8f4;
+  --paper-dark:   #f0ece3;
+  --paper-cream:  #ede8db;
+  --ink:          #1e1a14;
+  --ink-light:    #4a4035;
+  --ink-faded:    #7a7265;
+
+  --yellow:       #fde047;
+  --yellow-bg:    #fef9c3;
+  --pink:         #f9a8d4;
+  --pink-bg:      #fdf2f8;
+  --blue:         #93c5fd;
+  --blue-bg:      #eff6ff;
+  --green:        #86efac;
+  --green-bg:     #f0fdf4;
+  --purple:       #a855f7;
+  --purple-light: #c084fc;
+  --purple-bg:    #faf5ff;
+  --orange:       #fb923c;
+  --orange-bg:    #fff7ed;
+
+  --sticky-1: #fef08a;
+  --sticky-2: #bbf7d0;
+  --sticky-3: #bfdbfe;
+  --sticky-4: #fecdd3;
+
+  --correct:    #16a34a;
+  --correct-bg: #dcfce7;
+  --wrong:      #dc2626;
+  --wrong-bg:   #fee2e2;
+  --border:     #d4cdc0;
+  --shadow:     rgba(30,26,20,0.10);
+
+  /* Rounded playful font — readable & friendly */
+  --font-display: 'Fredoka', 'Nunito', sans-serif;
+  --font-body:    'Nunito', sans-serif;
+
+  /* Sketchy border tricks */
+  --r-card: 16px 4px 14px 6px / 6px 16px 4px 14px;
+  --r-btn:  40px 4px 44px 6px / 6px 44px 4px 40px;
+  --r-note: 3px 8px 4px 3px / 8px 3px 8px 4px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  background: var(--paper);
+  color: var(--ink);
+  background-image:
+    linear-gradient(var(--paper-dark) 1px, transparent 1px),
+    linear-gradient(90deg, var(--paper-dark) 1px, transparent 1px);
+  background-size: 32px 32px;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  width: 100%;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1,h2,h3,h4 {
+  font-family: var(--font-display);
+  color: var(--ink);
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+p { margin: 0; }
+
+a { color: inherit; text-decoration: none; }
+
+/* ── Sketch card ─────────────────────────────────────────── */
+.sketch-card {
+  background: #fff;
+  border: 2.5px solid var(--ink);
+  border-radius: var(--r-card);
+  box-shadow: 4px 4px 0 var(--ink);
+  position: relative;
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn-sketch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 10px 22px;
+  border: 2.5px solid var(--ink);
+  border-radius: var(--r-btn);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 0.08s, box-shadow 0.08s, background 0.15s;
+  box-shadow: 3px 3px 0 var(--ink);
+  white-space: nowrap;
+  user-select: none;
+}
+.btn-sketch:hover:not(:disabled) {
+  transform: translate(-1px,-1px);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+.btn-sketch:active:not(:disabled) {
+  transform: translate(2px,2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+.btn-sketch:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn-sketch.primary  { background: var(--yellow); }
+.btn-sketch.accent   { background: var(--purple); color:#fff; }
+.btn-sketch.danger   { background: var(--wrong-bg); border-color: var(--wrong); color: var(--wrong); }
+.btn-sketch.success  { background: var(--correct-bg); border-color: var(--correct); color: var(--correct); }
+.btn-sketch.ghost    { border-style: dashed; box-shadow: none; background:transparent; }
+.btn-sketch.sm       { font-size:0.85rem; padding: 6px 14px; }
+
+/* ── Sticky notes ────────────────────────────────────────── */
+.sticky-note {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  padding: 18px 20px;
+  border: 1.5px solid rgba(30,26,20,0.18);
+  box-shadow: 3px 4px 10px var(--shadow), inset 0 -4px 0 rgba(0,0,0,0.07);
+  line-height: 1.6;
+  position: relative;
+}
+.sticky-note::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 8px;
+  background: rgba(0,0,0,0.06);
+  border-radius: inherit;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.sticky-note.yellow { background: var(--sticky-1); border-radius: var(--r-note); }
+.sticky-note.green  { background: var(--sticky-2); border-radius: var(--r-note); }
+.sticky-note.blue   { background: var(--sticky-3); border-radius: var(--r-note); }
+.sticky-note.pink   { background: var(--sticky-4); border-radius: var(--r-note); }
+
+/* Foldable sticky note corner */
+.sticky-note.foldable {
+  cursor: pointer;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.sticky-note.foldable::after {
+  content: '';
+  position: absolute;
+  bottom: 0; right: 0;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 0 0 22px 22px;
+  border-color: transparent transparent rgba(0,0,0,0.15) transparent;
+  transition: border-width 0.2s;
+}
+.sticky-note.foldable:hover {
+  transform: rotate(-1deg) scale(1.02);
+  box-shadow: 5px 6px 14px var(--shadow);
+}
+.sticky-note.foldable:hover::after {
+  border-width: 0 0 32px 32px;
+}
+
+/* ── Inputs ──────────────────────────────────────────────── */
+.sketch-input,
+.sketch-textarea {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  width: 100%;
+  background: #fff;
+  border: 2.5px solid var(--ink);
+  border-radius: 8px 3px 8px 4px / 4px 8px 3px 8px;
+  padding: 11px 14px;
+  color: var(--ink);
+  outline: none;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  box-shadow: 3px 3px 0 var(--ink);
+  resize: vertical;
+}
+.sketch-input:focus,
+.sketch-textarea:focus {
+  box-shadow: 4px 4px 0 var(--purple);
+  border-color: var(--purple);
+}
+.sketch-input::placeholder,
+.sketch-textarea::placeholder {
+  color: var(--ink-faded);
+}
+
+/* ── Modal overlay ───────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30,26,20,0.45);
+  backdrop-filter: blur(3px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* ── Doodle divider ──────────────────────────────────────── */
+.doodle-divider {
+  border: none;
+  border-top: 2px dashed var(--border);
+  margin: 24px 0;
+}
+
+/* ── Misc utils ──────────────────────────────────────────── */
+.highlight     { background: var(--yellow); padding: 0 5px; border-radius: 4px; }
+.text-faded    { color: var(--ink-faded); }
+.font-display  { font-family: var(--font-display); }
+
+/* ── Animations ──────────────────────────────────────────── */
+@keyframes bounceIn {
+  0%   { opacity:0; transform: scale(0.88) translateY(14px); }
+  65%  { transform: scale(1.03) translateY(-3px); }
+  100% { opacity:1; transform: scale(1) translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity:0; transform: translateY(22px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity:0; }
+  to   { opacity:1; }
+}
+@keyframes wiggle {
+  0%,100% { transform: rotate(-1.5deg); }
+  50%     { transform: rotate(1.5deg); }
+}
+@keyframes pulse-shadow {
+  0%,100% { box-shadow: 3px 3px 0 var(--ink); }
+  50%     { box-shadow: 5px 5px 0 var(--purple); }
+}
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--paper-cream); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* ── Responsive base ─────────────────────────────────────── */
+@media (max-width: 600px) {
+  body { font-size: 15px; }
+  .btn-sketch { font-size: 0.95rem; padding: 9px 18px; }
+}
+
+/* ── GSAP scroll helper ──────────────────────────────────────── */
+.step-hidden {
+  opacity: 0;
+  transform: translateY(28px);
+}
+
+/* ── Hero CSS animations (always work, no JS needed) ──────────── */
+@keyframes heroFadeUp {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes heroFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.hero-anim-0 { animation: heroFadeUp 0.55s cubic-bezier(.22,.68,0,1.2) 0.05s both; }
+.hero-anim-1 { animation: heroFadeUp 0.55s cubic-bezier(.22,.68,0,1.2) 0.18s both; }
+.hero-anim-2 { animation: heroFadeUp 0.55s cubic-bezier(.22,.68,0,1.2) 0.32s both; }
+.hero-anim-3 { animation: heroFadeUp 0.55s cubic-bezier(.22,.68,0,1.2) 0.46s both; }
+.hero-anim-4 { animation: heroFadeUp 0.55s cubic-bezier(.22,.68,0,1.2) 0.60s both; }
+.hero-doodle-anim { animation: heroFadeIn 0.8s ease 0.1s both; }
+
+/* ── Full-page inner layout ───────────────────────────────────── */
+.inner-page-wrap {
+  min-height: calc(100svh - 64px);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Scroll-reveal utility ────────────────────────────────────── */
+.reveal-hidden {
+  opacity: 0;
+  transform: translateY(40px);
+}
+
+
