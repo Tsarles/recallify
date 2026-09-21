@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import gsap from 'gsap';
 import { parseQuizText } from '../utils/parser';
-import { canAddDeck } from '../utils/storage';
 
 const FORMAT_EXAMPLE = `1. What is the capital of France?
 A. London
@@ -64,7 +63,6 @@ export default function PasteInput({ onCreateDeck }) {
     setError('');
     if (!text.trim()) { setError('Please paste your quiz questions first!'); return; }
     if (!title.trim()) { setError('Give your deck a title!'); return; }
-    if (!canAddDeck()) { setError('You already have 5 decks — the max! Delete one to add a new deck.'); return; }
     const cards = parseQuizText(text);
     if (cards.length === 0) { setError("Hmm, couldn't find any questions. Check the format on the sticky note!"); return; }
     setPreview(cards);

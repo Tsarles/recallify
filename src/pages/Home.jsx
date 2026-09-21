@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Header      from '../components/Header';
 import Footer      from '../components/Footer';
 import Decklist    from '../components/Decklist';
@@ -7,7 +7,10 @@ import QuizEngine  from './QuizEngine';
 import Landing     from './Landing';
 import Archive     from './Archive';
 import SuggestionModal from '../components/SuggestionModal';
-import { saveDeck, loadDecks } from '../utils/storage';
+import AuthModal from '../components/AuthModal';
+import SharedDeck from './SharedDeck';
+import { supabase } from '../lib/supabase';
+import { createDeck, listDecks } from '../utils/decks';
 
 export default function Home() {
   // view: 'landing' | 'decks' | 'paste' | 'quiz' | 'archive'
@@ -16,18 +19,32 @@ export default function Home() {
   const [quizMode,    setQuizMode]   = useState('quiz');
   const [toast,       setToast]      = useState('');
   const [showSuggest, setShowSuggest] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+  const [user, setUser] = useState(null);
+  const [dataVersion, setDataVersion] = useState(0);
+  const [sharedQuiz, setSharedQuiz] = useState(null);
+  const sharedDeckId = new URLSearchParams(window.location.search).get('deck');
 
-  const showToast = (msg) => {
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user || null));
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user || null));
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  const showToast = useCallback((msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 3000);
-  };
+  }, []);
 
   const handleNav = (target) => setView(target);
 
-  const handleCreateDeck = (deckData) => {
+  const handleCreateDeck = async (deckData) => {
     try {
-      saveDeck(deckData);
-      showToast(`Saved! "${deckData.title}" — ${loadDecks().length}/5 decks used.`);
+      await createDeck(deckData, user?.id);
+      const count = (await listDecks(user?.id)).length;
+      setDataVersion((version) => version + 1);
+      showToast(`Saved! "${deckData.title}" — ${count}/5 decks used.`);
       setView('decks');
     } catch (e) {
       showToast(`Error: ${e.message}`);
@@ -40,9 +57,9 @@ export default function Home() {
     setView('quiz');
   };
 
-  const handleQuizFinish = (nextMode) => {
+  const handleQuizFinish = async (nextMode) => {
     if (nextMode === 'review') {
-      const fresh = loadDecks().find((d) => d.id === activeDeck.id);
+      const fresh = (await listDecks(user?.id)).find((d) => d.id === activeDeck.id);
       setActiveDeck(fresh || activeDeck);
       setQuizMode('review');
     }
@@ -56,10 +73,30 @@ export default function Home() {
   const isLanding = view === 'landing';
   const isQuiz    = view === 'quiz';
 
+  const leaveSharedDeck = () => {
+    window.history.replaceState({}, '', window.location.pathname);
+    setSharedQuiz(null);
+    setView('landing');
+  };
+
+  if (sharedDeckId && !sharedQuiz) {
+    return (
+      <>
+        <SharedDeck deckId={sharedDeckId} user={user} onBack={leaveSharedDeck} onStudy={setSharedQuiz} onAccount={() => setShowAccount(true)} onToast={showToast} />
+        {showAccount && <AuthModal user={user} onClose={() => setShowAccount(false)} onChanged={() => setDataVersion((v) => v + 1)} onToast={showToast} />}
+        {toast && <div className={`toast ${toast.startsWith('Error:') ? 'toast-error' : 'toast-success'}`}>{toast}</div>}
+      </>
+    );
+  }
+
+  if (sharedQuiz) {
+    return <QuizEngine deck={sharedQuiz} userId={null} mode="quiz" onFinish={() => {}} onBack={() => setSharedQuiz(null)} />;
+  }
+
   return (
     <div className="app-shell">
       {!isLanding && (
-        <Header view={view} onNav={handleNav} onSuggest={() => setShowSuggest(true)} />
+        <Header view={view} user={user} onNav={handleNav} onSuggest={() => setShowSuggest(true)} onAccount={() => setShowAccount(true)} />
       )}
 
       <main className="app-main">
@@ -72,6 +109,8 @@ export default function Home() {
             onSelectDeck={handleSelectDeck}
             onAddDeck={() => setView('paste')}
             onShowToast={showToast}
+            userId={user?.id}
+            refreshKey={dataVersion}
           />
         )}
 
@@ -82,6 +121,7 @@ export default function Home() {
         {view === 'quiz' && activeDeck && (
           <QuizEngine
             deck={activeDeck}
+            userId={user?.id}
             mode={quizMode}
             onFinish={handleQuizFinish}
             onBack={handleQuizBack}
@@ -89,7 +129,7 @@ export default function Home() {
         )}
 
         {view === 'archive' && (
-          <Archive onShowToast={showToast} />
+          <Archive onShowToast={showToast} userId={user?.id} refreshKey={dataVersion} />
         )}
       </main>
 
@@ -108,6 +148,7 @@ export default function Home() {
 
       {/* Global suggestion modal */}
       {showSuggest && <SuggestionModal onClose={() => setShowSuggest(false)} />}
+      {showAccount && <AuthModal user={user} onClose={() => setShowAccount(false)} onChanged={() => setDataVersion((v) => v + 1)} onToast={showToast} />}
 
       <style>{`
         .app-shell {

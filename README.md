@@ -1,16 +1,43 @@
-# React + Vite
+# Recallify
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Recallify turns pasted multiple-choice questions into timed study decks. It works in guest mode with browser storage, or with a free account for cross-device sync and deck sharing.
 
-Currently, two official plugins are available:
+## Local setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
 
-## React Compiler
+## Enable accounts, sync, and sharing
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Create a Supabase project.
+2. Run [`supabase/schema.sql`](supabase/schema.sql) in its SQL Editor.
+3. Copy the project URL and publishable key into `.env.local`:
 
-## Expanding the ESLint configuration
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+4. In Supabase Authentication URL Configuration, set the Site URL to the deployed Recallify URL and add the local development URL as an allowed redirect URL.
+5. Restart the Vite development server.
+
+Never put a Supabase secret or `service_role` key in a `VITE_` environment variable.
+
+## Checks
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+## Data behavior
+
+- Guests keep decks in local browser storage.
+- Signed-in users store decks in Supabase and can use them on other devices.
+- Existing guest decks can be moved into an account from the Account dialog.
+- Decks are private until their owner enables sharing.
+- Shared links are read-only; signed-in recipients can save an independent copy.

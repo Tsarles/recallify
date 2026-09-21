@@ -3,14 +3,14 @@ import gsap from 'gsap';
 import QuizCard    from '../components/QuizCard';
 import ScoreBoard  from '../components/ScoreBoard';
 import RevealButton from '../components/RevealButton';
-import { saveQuizResult } from '../utils/storage';
+import { saveQuizResult } from '../utils/decks';
 
 /**
  * Active quiz engine.
  * mode: 'quiz' = full deck   |   'review' = only wrong cards from last run
  * Cards should already be shuffled before being passed in (done in Decklist).
  */
-export default function QuizEngine({ deck, mode = 'quiz', onFinish, onBack }) {
+export default function QuizEngine({ deck, userId, mode = 'quiz', onFinish, onBack }) {
   const timerSeconds = deck.timerSeconds || 20;
 
   const cards = mode === 'review'
@@ -27,10 +27,13 @@ export default function QuizEngine({ deck, mode = 'quiz', onFinish, onBack }) {
   const [reveals,  setReveals]  = useState(3);
   const [revealed, setRevealed] = useState(false);
   const [expired,  setExpired]  = useState(false);
-  const startTime = useRef(Date.now());
+  const [timeTaken, setTimeTaken] = useState(null);
+  const startTime = useRef(null);
+  const resultSaved = useRef(false);
   const toolbarRef = useRef(null);
 
   useEffect(() => {
+    startTime.current = Date.now();
     if (toolbarRef.current) {
       gsap.fromTo(toolbarRef.current,
         { opacity: 0, y: -12 },
@@ -38,6 +41,16 @@ export default function QuizEngine({ deck, mode = 'quiz', onFinish, onBack }) {
       );
     }
   }, []);
+
+  const done = index >= cards.length;
+
+  useEffect(() => {
+    if (!done || resultSaved.current || startTime.current === null) return;
+    const elapsed = Math.round((Date.now() - startTime.current) / 1000);
+    resultSaved.current = true;
+    setTimeTaken(elapsed);
+    saveQuizResult(deck, { score, total: cards.length, wrongIds, timeTaken: elapsed }, userId);
+  }, [cards.length, deck, done, score, userId, wrongIds]);
 
   if (cards.length === 0) {
     return (
@@ -54,8 +67,6 @@ export default function QuizEngine({ deck, mode = 'quiz', onFinish, onBack }) {
   }
 
   const current = cards[index];
-  const done    = index >= cards.length;
-
   const advance = (isCorrect, cardIndex) => {
     setRevealed(false);
     setExpired(false);
@@ -82,9 +93,6 @@ export default function QuizEngine({ deck, mode = 'quiz', onFinish, onBack }) {
   // ── Finished screen ──────────────────────────────────────
   if (done) {
     const pct      = Math.round((score / cards.length) * 100);
-    const timeTaken = Math.round((Date.now() - startTime.current) / 1000);
-    saveQuizResult(deck.id, { score, total: cards.length, wrongIds, timeTaken });
-
     const icon  = pct === 100 ? 'bxs-trophy' : pct >= 70 ? 'bxs-star' : pct >= 40 ? 'bxs-like' : 'bx-book-open';
     const color = pct === 100 ? 'var(--yellow)' : pct >= 70 ? 'var(--yellow)' : pct >= 40 ? 'var(--blue)' : 'var(--purple)';
     const msg   = pct === 100 ? 'Perfect score!'
@@ -97,6 +105,8 @@ export default function QuizEngine({ deck, mode = 'quiz', onFinish, onBack }) {
       setIndex(0); setScore(0); setWrong(0);
       setWrongIds([]); setReveals(3); setRevealed(false); setExpired(false);
       startTime.current = Date.now();
+      resultSaved.current = false;
+      setTimeTaken(null);
       // Note: cards are already shuffled from before, reshuffle for next round
       cards.sort(() => Math.random() - 0.5);
     };
@@ -122,7 +132,7 @@ export default function QuizEngine({ deck, mode = 'quiz', onFinish, onBack }) {
             <span className="result-label">Score</span>
           </div>
           <div className="result-stat">
-            <span className="result-num">{Math.floor(timeTaken / 60)}:{String(timeTaken % 60).padStart(2,'0')}</span>
+            <span className="result-num">{Math.floor((timeTaken || 0) / 60)}:{String((timeTaken || 0) % 60).padStart(2,'0')}</span>
             <span className="result-label">Time</span>
           </div>
         </div>
@@ -261,7 +271,7 @@ export default function QuizEngine({ deck, mode = 'quiz', onFinish, onBack }) {
         </p>
       </div>
 
-      <ScoreBoard score={score} wrong={wrong} total={cards.length} current={index} />
+      <ScoreBoard score={score} wrong={wrong} total={cards.length} />
 
       {expired && (
         <div className="expired-banner">

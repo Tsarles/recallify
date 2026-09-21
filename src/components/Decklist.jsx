@@ -1,4 +1,4 @@
-import { loadDecks, deleteDeck, archiveDeck, updateDeck } from '../utils/storage';
+import { archiveDeck, getShareUrl, listDecks, removeDeck, updateDeck } from '../utils/decks';
 import { useState, useRef, useEffect } from 'react';
 import gsap from 'gsap';
 
@@ -268,12 +268,28 @@ function EditModal({ deck, onClose, onSave }) {
 }
 
 // ── Main Decklist ─────────────────────────────────────────────
-export default function Decklist({ onSelectDeck, onAddDeck, onShowToast }) {
-  const [decks,       setDecks]      = useState(() => loadDecks());
+export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId, refreshKey }) {
+  const [decks,       setDecks]      = useState([]);
   const [confirmDel,  setConfirm]    = useState(null);
   const [settingsDeck, setSettingsDeck] = useState(null);
   const [editDeck,    setEditDeck]   = useState(null);
   const gridRef = useRef(null);
+
+  const refresh = async () => {
+    try {
+      setDecks(await listDecks(userId));
+    } catch (error) {
+      onShowToast?.(`Error: ${error.message}`);
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+    listDecks(userId)
+      .then((nextDecks) => active && setDecks(nextDecks))
+      .catch((error) => active && onShowToast?.(`Error: ${error.message}`));
+    return () => { active = false; };
+  }, [onShowToast, userId, refreshKey]);
 
   useEffect(() => {
     if (gridRef.current) {
@@ -285,30 +301,36 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast }) {
     }
   }, []);
 
-  const refresh = () => setDecks(loadDecks());
-
-  const handleDelete = (id) => {
-    deleteDeck(id);
-    refresh();
-    setConfirm(null);
+  const handleDelete = async (id) => {
+    try {
+      await removeDeck(id, userId);
+      await refresh();
+      setConfirm(null);
+    } catch (error) {
+      onShowToast?.(`Error: ${error.message}`);
+    }
   };
 
-  const handleArchive = (id, title) => {
-    archiveDeck(id);
-    refresh();
-    onShowToast?.(`"${title}" archived — deletes in 30 days.`);
+  const handleArchive = async (id, title) => {
+    try {
+      await archiveDeck(id, userId);
+      await refresh();
+      onShowToast?.(`"${title}" archived — deletes in 30 days.`);
+    } catch (error) {
+      onShowToast?.(`Error: ${error.message}`);
+    }
   };
 
-  const handleSaveSettings = (deckId, updates) => {
-    updateDeck(deckId, updates);
-    refresh();
+  const handleSaveSettings = async (deckId, updates) => {
+    await updateDeck(deckId, updates, userId);
+    await refresh();
     onShowToast?.('Settings saved!');
     setSettingsDeck(null);
   };
 
-  const handleSaveEdit = (deckId, updates) => {
-    updateDeck(deckId, updates);
-    refresh();
+  const handleSaveEdit = async (deckId, updates) => {
+    await updateDeck(deckId, updates, userId);
+    await refresh();
     onShowToast?.('Deck updated!');
     setEditDeck(null);
   };
@@ -317,6 +339,22 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast }) {
   const handlePlay = (deck) => {
     const shuffled = { ...deck, cards: [...deck.cards].sort(() => Math.random() - 0.5) };
     onSelectDeck(shuffled, 'quiz');
+  };
+
+  const handleShare = async (deck) => {
+    if (!userId) return onShowToast?.('Error: Sign in to create a shareable cloud link.');
+    try {
+      const shared = await updateDeck(deck.id, { isPublic: !deck.isPublic }, userId);
+      await refresh();
+      if (shared.isPublic) {
+        await navigator.clipboard.writeText(getShareUrl(deck.id));
+        onShowToast?.('Share link copied. Anyone with it can study this deck.');
+      } else {
+        onShowToast?.('Sharing turned off for this deck.');
+      }
+    } catch (error) {
+      onShowToast?.(`Error: ${error.message}`);
+    }
   };
 
   const slotsLeft = 5 - decks.length;
@@ -380,6 +418,9 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast }) {
                   </div>
                   {/* Action row */}
                   <div className="deck-top-actions">
+                    <button className="deck-icon-btn" onClick={() => handleShare(deck)} title={deck.isPublic ? 'Stop sharing' : 'Share deck'}>
+                      <i className={`bx ${deck.isPublic ? 'bxs-share-alt' : 'bx-share-alt'}`} />
+                    </button>
                     <button
                       id={`btn-settings-${deck.id}`}
                       className="deck-icon-btn"
@@ -460,10 +501,10 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast }) {
 
           {/* Empty slots */}
           {Array.from({ length: slotsLeft }).map((_, i) => (
-            <div key={`empty-${i}`} className="deck-card deck-card--empty" onClick={onAddDeck}>
+            <button key={`empty-${i}`} type="button" className="deck-card deck-card--empty" onClick={onAddDeck}>
               <i className="bx bx-plus-circle empty-slot-icon" />
               <span>Add Deck</span>
-            </div>
+            </button>
           ))}
         </div>
       )}

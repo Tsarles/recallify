@@ -268,7 +268,7 @@ D. Option four
       <section className="lnd-section lnd-features" ref={featRef}>
         <div className="lnd-section-inner">
           <div className="section-eyebrow">
-            <i className="bx bxs-rocket" /> What's included in V1
+            <i className="bx bxs-rocket" /> What's included
           </div>
           <h2 className="section-title">Everything you need</h2>
           <div className="feat-grid">
@@ -280,11 +280,11 @@ D. Option four
               ['bx-shuffle',        'Shuffled every round'],
               ['bx-history',        'Review wrong answers'],
               ['bx-pencil',         'ID card mode'],
-              ['bx-user-x',         'Zero sign-up'],
+              ['bx-user',           'Optional accounts'],
               ['bx-archive',        '30-day archive'],
               ['bxs-edit',          'Edit decks anytime'],
-              ['bx-devices',        'Works on any device'],
-              ['bx-lock',           '100% local data'],
+              ['bx-devices',        'Sync across devices'],
+              ['bx-share-alt',      'Shareable decks'],
             ].map(([icon, label]) => (
               <div key={label} className="feat-chip">
                 <i className={`bx ${icon}`} /> {label}

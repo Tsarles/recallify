@@ -1,4 +1,4 @@
-export default function ScoreBoard({ score, wrong, total, current }) {
+export default function ScoreBoard({ score, wrong, total }) {
   const answered = score + wrong;
   const pct      = total > 0 ? Math.round((score / total) * 100) : 0;
 

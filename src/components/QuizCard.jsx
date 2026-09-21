@@ -1,20 +1,10 @@
 import { useState, useRef } from 'react';
 import gsap from 'gsap';
 import Timer from './Timer';
+import { shuffleCopy } from '../utils/shuffle';
 
-const OPTION_COLORS = {
-  A: 'var(--blue-bg)',
-  B: 'var(--yellow-bg)',
-  C: 'var(--green-bg)',
-  D: 'var(--pink-bg)',
-};
-
-const OPTION_BORDER = {
-  A: 'var(--blue)',
-  B: 'var(--yellow)',
-  C: 'var(--green)',
-  D: 'var(--pink)',
-};
+const OPTION_COLORS = ['var(--blue-bg)', 'var(--yellow-bg)', 'var(--green-bg)', 'var(--pink-bg)'];
+const OPTION_BORDERS = ['var(--blue)', 'var(--yellow)', 'var(--green)', 'var(--pink)'];
 
 export default function QuizCard({
   data,
@@ -27,6 +17,7 @@ export default function QuizCard({
 }) {
   const [chosen, setChosen] = useState(null);
   const [locked, setLocked] = useState(false);
+  const [options] = useState(() => shuffleCopy(data.options || []));
   const cardRef = useRef(null);
 
   const handleChoose = (optId) => {
@@ -96,7 +87,7 @@ export default function QuizCard({
       <p className="question-text">{data.question}</p>
 
       <div className="options-grid">
-        {data.options.map((opt) => {
+        {options.map((opt, optionIndex) => {
           const state = getOptionState(opt.id);
           return (
             <button
@@ -104,13 +95,12 @@ export default function QuizCard({
               id={`btn-option-${opt.id}`}
               className={`option-btn option-btn--${state}`}
               style={{
-                '--opt-bg':     OPTION_COLORS[opt.id] || 'var(--paper)',
-                '--opt-border': OPTION_BORDER[opt.id] || 'var(--border)',
+                '--opt-bg':     OPTION_COLORS[optionIndex] || 'var(--paper)',
+                '--opt-border': OPTION_BORDERS[optionIndex] || 'var(--border)',
               }}
               onClick={() => handleChoose(opt.id)}
               disabled={locked}
             >
-              <span className="opt-label">{opt.id}</span>
               <span className="opt-text">{opt.text}</span>
               {state === 'correct' && <i className="bx bxs-check-circle opt-icon" />}
               {state === 'wrong'   && <i className="bx bxs-x-circle opt-icon" />}
@@ -221,21 +211,6 @@ function CardStyles() {
         background: var(--wrong-bg) !important;
         box-shadow: 3px 3px 0 var(--wrong) !important;
         opacity: 0.85;
-      }
-
-      .opt-label {
-        font-family: var(--font-display);
-        font-size: 1.1rem;
-        font-weight: 700;
-        min-width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.7);
-        border: 2px solid var(--opt-border, var(--ink));
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
       }
 
       .opt-text { flex: 1; line-height: 1.4; }

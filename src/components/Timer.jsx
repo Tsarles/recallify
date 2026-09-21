@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /**
  * Timer component — countdown bar + seconds display.
@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
  */
 export default function Timer({ seconds = 20, onExpire, running = true }) {
   const [timeLeft, setTimeLeft] = useState(seconds);
+  const onExpireRef = useRef(onExpire);
   const pct = Math.max(0, (timeLeft / seconds) * 100);
 
   // colour shifts: green → yellow → red
@@ -15,13 +16,17 @@ export default function Timer({ seconds = 20, onExpire, running = true }) {
                'var(--wrong)';
 
   useEffect(() => {
+    onExpireRef.current = onExpire;
+  }, [onExpire]);
+
+  useEffect(() => {
     setTimeLeft(seconds);
   }, [seconds]);
 
   useEffect(() => {
     if (!running) return;
     if (timeLeft <= 0) {
-      onExpire?.();
+      onExpireRef.current?.();
       return;
     }
     const id = setTimeout(() => setTimeLeft((t) => t - 1), 1000);

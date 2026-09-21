@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import gsap from 'gsap';
-import { loadArchivedDecks, restoreDeck, deleteDeck, daysUntilExpiry } from '../utils/storage';
+import { daysUntilExpiry } from '../utils/storage';
+import { listDecks, removeDeck, restoreDeck } from '../utils/decks';
 
-export default function Archive({ onShowToast }) {
-  const [decks, setDecks] = useState(() => loadArchivedDecks());
+export default function Archive({ onShowToast, userId, refreshKey }) {
+  const [decks, setDecks] = useState([]);
   const listRef = useRef(null);
 
   useEffect(() => {
@@ -16,22 +17,42 @@ export default function Archive({ onShowToast }) {
     }
   }, []);
 
-  const refresh = () => setDecks(loadArchivedDecks());
-
-  const handleRestore = (id, title) => {
+  const refresh = async () => {
     try {
-      restoreDeck(id);
-      refresh();
+      setDecks(await listDecks(userId, true));
+    } catch (error) {
+      onShowToast?.(`Error: ${error.message}`);
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+    listDecks(userId, true)
+      .then((nextDecks) => active && setDecks(nextDecks))
+      .catch((error) => active && onShowToast?.(`Error: ${error.message}`));
+    return () => { active = false; };
+  }, [onShowToast, userId, refreshKey]);
+
+  const handleRestore = async (id, title) => {
+    try {
+      const activeCount = (await listDecks(userId)).length;
+      if (activeCount >= 5) throw new Error("Can't restore — you already have 5 active decks!");
+      await restoreDeck(id, userId);
+      await refresh();
       onShowToast?.(`"${title}" restored to decks!`);
     } catch (e) {
       onShowToast?.(`Error: ${e.message}`);
     }
   };
 
-  const handleDelete = (id, title) => {
-    deleteDeck(id);
-    refresh();
-    onShowToast?.(`"${title}" permanently deleted.`);
+  const handleDelete = async (id, title) => {
+    try {
+      await removeDeck(id, userId);
+      await refresh();
+      onShowToast?.(`"${title}" permanently deleted.`);
+    } catch (error) {
+      onShowToast?.(`Error: ${error.message}`);
+    }
   };
 
   return (
