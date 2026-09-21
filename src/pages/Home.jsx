@@ -23,7 +23,7 @@ export default function Home() {
   const [user, setUser] = useState(null);
   const [dataVersion, setDataVersion] = useState(0);
   const [sharedQuiz, setSharedQuiz] = useState(null);
-  const sharedDeckId = new URLSearchParams(window.location.search).get('deck');
+  const [sharedDeckId, setSharedDeckId] = useState(() => new URLSearchParams(window.location.search).get('deck'));
 
   useEffect(() => {
     if (!supabase) return;
@@ -75,6 +75,7 @@ export default function Home() {
 
   const leaveSharedDeck = () => {
     window.history.replaceState({}, '', window.location.pathname);
+    setSharedDeckId(null);
     setSharedQuiz(null);
     setView('landing');
   };
