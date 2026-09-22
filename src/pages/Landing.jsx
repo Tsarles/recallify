@@ -6,7 +6,7 @@ import FoldableNote from '../components/FoldableNote';
 import SuggestionModal from '../components/SuggestionModal';
 import Footer from '../components/Footer';
 import { hasHearted, setHearted } from '../utils/storage';
-import { getCount, incrementCount } from '../utils/counter';
+import { getCount, incrementCount, markVisitCounted, shouldCountVisit } from '../utils/counter';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -28,17 +28,26 @@ export default function Landing({ onGetStarted }) {
   const notesRef   = useRef(null);
   const stepsRef   = useRef(null);
   const featRef    = useRef(null);
-  const [hearts,   setHearts]       = useState(0);
-  const [visitors, setVisitors]     = useState(0);
+  const [hearts,   setHearts]       = useState(null);
+  const [visitors, setVisitors]     = useState(null);
   const [hearted,  setLocalHearted] = useState(() => hasHearted());
   const [showSuggest, setShowSuggest] = useState(false);
+  const [showRelease, setShowRelease] = useState(() => localStorage.getItem('recallify_release_v1_2') !== 'seen');
+
+  const dismissRelease = () => {
+    localStorage.setItem('recallify_release_v1_2', 'seen');
+    setShowRelease(false);
+  };
 
   // ── Load + auto-increment visitor count on mount ───────────
   useEffect(() => {
-    // Increment visitor on every landing page load
-    incrementCount('visitors').then(v => { if (v !== null) setVisitors(v); });
-    // Just read the heart count (don't increment)
-    getCount('hearts').then(h => setHearts(h));
+    const visitorRequest = shouldCountVisit()
+      ? incrementCount('visitors').then((count) => { if (count !== null) markVisitCounted(); return count; })
+      : getCount('visitors');
+    Promise.allSettled([visitorRequest, getCount('hearts')]).then(([visitorResult, heartResult]) => {
+      if (visitorResult.status === 'fulfilled' && visitorResult.value !== null) setVisitors(visitorResult.value);
+      if (heartResult.status === 'fulfilled') setHearts(heartResult.value);
+    });
   }, []);
 
   // ── GSAP ScrollTrigger (only for below-fold sections) ──────
@@ -85,12 +94,13 @@ export default function Landing({ onGetStarted }) {
     setLocalHearted(true);
     setHearted(); // persist to localStorage so they can't re-heart on this device
     // Increment server-side counter
-    const newCount = await incrementCount('hearts');
-    if (newCount !== null) {
-      setHearts(newCount);
-    } else {
+    try {
+      const newCount = await incrementCount('hearts');
+      if (newCount !== null) setHearts(newCount);
+      else setHearts(h => (h || 0) + 1);
+    } catch {
       // Fallback: just add 1 locally if API is down
-      setHearts(h => h + 1);
+      setHearts(h => (h || 0) + 1);
     }
     gsap.fromTo('.heart-btn', { scale: 1 }, { scale: 1.4, yoyo: true, repeat: 1, duration: 0.2 });
   };
@@ -111,8 +121,10 @@ export default function Landing({ onGetStarted }) {
           {/* Tag */}
           <div className="hero-tag hero-anim-0">
             <i className="bx bxs-pencil" />
-            No sign-up &nbsp;·&nbsp; No fuss &nbsp;·&nbsp; Just study
+            Study as a guest or create an account to sync
           </div>
+
+          <div className="hero-version hero-anim-0">V1.2</div>
 
           {/* Title */}
           <h1 className="hero-title hero-anim-1">
@@ -123,7 +135,7 @@ export default function Landing({ onGetStarted }) {
           {/* Desc */}
           <p className="hero-desc hero-anim-2">
             Ask ChatGPT to generate a quiz, paste it here, and Recallify turns it into
-            an interactive deck — with timers, scoring & review. <strong>Up to 5 decks. Always free.</strong>
+            an interactive deck — with timers, scoring & review. <strong>Up to 7 decks. Always free.</strong>
           </p>
 
           {/* Stats row - hearts + visitors */}
@@ -135,11 +147,11 @@ export default function Landing({ onGetStarted }) {
               title={hearted ? 'Already loved! ❤' : 'Show some love!'}
             >
               <i className={`bx ${hearted ? 'bxs-heart' : 'bx-heart'}`} />
-              <span>{hearts === 0 ? 'Be the first!' : `${hearts} ${hearts === 1 ? 'heart' : 'hearts'}`}</span>
+              <span>{hearts === null ? '...' : hearts === 0 ? 'Be the first!' : `${hearts} ${hearts === 1 ? 'heart' : 'hearts'}`}</span>
             </button>
             <div className="stat-pill visitors" title="Total visitors">
               <i className="bx bx-show" />
-              <span>{visitors === 0 ? '...' : `${visitors.toLocaleString()} ${visitors === 1 ? 'visitor' : 'visitors'}`}</span>
+              <span>{visitors === null ? '...' : `${visitors.toLocaleString()} ${visitors === 1 ? 'visitor' : 'visitors'}`}</span>
             </div>
           </div>
 
@@ -273,7 +285,7 @@ D. Option four
           <h2 className="section-title">Everything you need</h2>
           <div className="feat-grid">
             {[
-              ['bx-collection',     'Up to 5 decks'],
+              ['bx-collection',     'Up to 7 decks'],
               ['bx-time',           'Per-card timer'],
               ['bxs-star',          'Score tracking'],
               ['bx-hide',           '3 answer reveals'],
@@ -301,6 +313,20 @@ D. Option four
       {/* Suggestion Modal via portal */}
       {showSuggest && createPortal(
         <SuggestionModal onClose={() => setShowSuggest(false)} />,
+        document.body
+      )}
+
+      {showRelease && createPortal(
+        <div className="modal-overlay release-overlay" onMouseDown={(event) => event.target === event.currentTarget && dismissRelease()}>
+          <section className="release-note sticky-note yellow" role="dialog" aria-modal="true" aria-labelledby="release-title">
+            <button type="button" className="modal-close-btn" aria-label="Close V1.2 update note" onClick={dismissRelease}><i className="bx bx-x" /></button>
+            <p className="release-kicker"><i className="bx bx-bell" /> Recallify update</p>
+            <h2 id="release-title">Thank you for using Recallify</h2>
+            <p>This is V1.2. It includes account profiles, synced and shareable decks, deck notes, improved quiz editing, and answer-label controls.</p>
+            <p>Programming and math equation support may come next. Images are still being explored because Recallify remains focused on a fast paste-quiz-and-study workflow.</p>
+            <button className="btn-sketch primary" onClick={() => { dismissRelease(); onGetStarted(); }}>Start studying</button>
+          </section>
+        </div>,
         document.body
       )}
 
@@ -359,6 +385,27 @@ D. Option four
           box-shadow: 2px 2px 0 var(--ink);
           color: var(--ink);
         }
+        .hero-version {
+          position:absolute;
+          top:-28px;
+          right:0;
+          font-family:var(--font-display);
+          font-weight:700;
+          background:var(--green-bg);
+          border:2px solid var(--ink);
+          border-radius:99px;
+          padding:5px 12px;
+          box-shadow:2px 2px 0 var(--ink);
+          transform:rotate(3deg);
+        }
+
+        .release-note { width:min(560px,94vw); padding:34px 28px 28px; display:grid; gap:16px; }
+        .release-note h2 { font-size:1.7rem; }
+        .release-note p { line-height:1.65; }
+        .release-kicker { color:var(--purple); font:700 .92rem var(--font-display); text-transform:uppercase; letter-spacing:.05em; }
+        .release-note .btn-sketch { justify-self:start; }
+        .release-note .modal-close-btn { position:absolute; top:10px; right:10px; width:32px; height:32px; display:grid; place-items:center; border:0; border-radius:50%; background:rgba(0,0,0,.08); color:var(--ink); cursor:pointer; font-size:1.15rem; }
+        .release-note .modal-close-btn:hover { background:rgba(0,0,0,.16); }
 
         .hero-title {
           font-size: clamp(2.4rem, 6vw, 4rem);

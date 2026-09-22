@@ -288,11 +288,12 @@ export default function QuizEngine({ deck, userId, mode = 'quiz', onFinish, onBa
         onExpire={handleExpire}
         revealed={revealed}
         timerSeconds={timerSeconds}
+        showAnswerLabels={Boolean(deck.showAnswerLabels)}
       />
 
       <div className="qe-bottom">
         <RevealButton
-          answer={current.answerId}
+          answer={current.type === 'multiple-choice' ? (current.options.find((option) => option.id === current.answerId)?.text || current.answerId) : current.answerId}
           reveals={reveals}
           setReveals={setReveals}
           revealed={revealed}

@@ -1,14 +1,16 @@
 import { supabase } from '../lib/supabase';
 import * as local from './storage';
 
-const MAX_DECKS = 5;
+const MAX_DECKS = 7;
 
 const fromRow = (row) => ({
   id: row.id,
   title: row.title,
   subject: row.subject,
+  notes: row.notes || '',
   cards: row.cards,
   timerSeconds: row.timer_seconds,
+  showAnswerLabels: Boolean(row.show_answer_labels),
   history: row.history,
   archivedAt: row.archived_at,
   createdAt: row.created_at,
@@ -19,8 +21,10 @@ const toRow = (deck, userId) => ({
   user_id: userId,
   title: deck.title || 'Untitled Deck',
   subject: deck.subject || '',
+  notes: deck.notes || '',
   cards: deck.cards || [],
   timer_seconds: deck.timerSeconds || 20,
+  show_answer_labels: Boolean(deck.showAnswerLabels),
   history: deck.history || [],
   archived_at: deck.archivedAt || null,
   is_public: deck.isPublic || false,
@@ -62,8 +66,10 @@ export async function updateDeck(deckId, updates, userId) {
   const patch = {};
   if ('title' in updates) patch.title = updates.title;
   if ('subject' in updates) patch.subject = updates.subject;
+  if ('notes' in updates) patch.notes = updates.notes;
   if ('cards' in updates) patch.cards = updates.cards;
   if ('timerSeconds' in updates) patch.timer_seconds = updates.timerSeconds;
+  if ('showAnswerLabels' in updates) patch.show_answer_labels = updates.showAnswerLabels;
   if ('history' in updates) patch.history = updates.history;
   if ('archivedAt' in updates) patch.archived_at = updates.archivedAt;
   if ('isPublic' in updates) patch.is_public = updates.isPublic;

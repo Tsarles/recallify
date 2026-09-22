@@ -1,6 +1,6 @@
 /**
  * Recallify localStorage helpers v2
- * - Up to 5 active decks
+ * - Up to 7 active decks
  * - Archive (auto-delete after 30 days)
  * - Quiz history, hearts, suggestions
  */
@@ -8,7 +8,7 @@
 const DECKS_KEY       = 'recallify_decks';
 const HEARTS_KEY      = 'recallify_hearts';
 const SUGGESTIONS_KEY = 'recallify_suggestions';
-const MAX_DECKS       = 5;
+const MAX_DECKS       = 7;
 const ARCHIVE_DAYS    = 30;
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -52,8 +52,10 @@ export function saveDeck(deck) {
     id:           Date.now().toString(),
     title:        deck.title   || 'Untitled Deck',
     subject:      deck.subject || '',
+    notes:        deck.notes || '',
     cards:        deck.cards   || [],
     timerSeconds: deck.timerSeconds || 20,
+    showAnswerLabels: Boolean(deck.showAnswerLabels),
     createdAt:    new Date().toISOString(),
     archivedAt:   null,
     history:      [],

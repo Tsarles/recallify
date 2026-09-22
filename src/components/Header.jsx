@@ -76,9 +76,9 @@ export default function Header({ view, user, onNav, onSuggest, onAccount }) {
           <i className="bx bx-message-add" />
           <span>Suggest</span>
         </button>
-        <button id="nav-account" className="nav-btn account-btn" onClick={onAccount}>
+        <button id="nav-account" className={`nav-btn account-btn ${view === 'profile' ? 'active' : ''}`} onClick={() => user ? handleNav('profile') : onAccount()}>
           <i className={`bx ${user ? 'bxs-user-circle' : 'bx-user-circle'}`} />
-          <span>{user ? 'Account' : 'Sign In'}</span>
+          <span>{user ? 'Profile' : 'Sign In'}</span>
         </button>
       </nav>
 
@@ -112,9 +112,9 @@ export default function Header({ view, user, onNav, onSuggest, onAccount }) {
             <i className="bx bx-message-add" />
             <span>Leave a Suggestion</span>
           </button>
-          <button className="mobile-nav-item" onClick={() => { onAccount(); closeMenu(); }}>
+          <button className={`mobile-nav-item ${view === 'profile' ? 'active' : ''}`} onClick={() => { user ? handleNav('profile') : onAccount(); if (!user) closeMenu(); }}>
             <i className={`bx ${user ? 'bxs-user-circle' : 'bx-user-circle'}`} />
-            <span>{user ? 'Account & Sync' : 'Sign In & Sync'}</span>
+            <span>{user ? 'Profile & Sync' : 'Sign In & Sync'}</span>
           </button>
         </nav>
       )}

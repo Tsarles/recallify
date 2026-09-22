@@ -29,6 +29,8 @@ export default function PasteInput({ onCreateDeck }) {
   const [text,    setText]    = useState('');
   const [title,   setTitle]   = useState('');
   const [subject, setSubject] = useState('');
+  const [notes, setNotes] = useState('');
+  const [showAnswerLabels, setShowAnswerLabels] = useState(false);
   const [timer,   setTimer]   = useState(20);
   const [custom,  setCustom]  = useState('');
   const [useCustom, setUseCustom] = useState(false);
@@ -72,7 +74,7 @@ export default function PasteInput({ onCreateDeck }) {
   const handleConfirm = () => {
     if (!preview) return;
     const timerVal = useCustom ? (parseInt(custom, 10) || 20) : timer;
-    onCreateDeck({ title, subject, cards: preview, timerSeconds: timerVal });
+    onCreateDeck({ title, subject, notes, cards: preview, timerSeconds: timerVal, showAnswerLabels });
   };
 
   return (
@@ -131,6 +133,12 @@ export default function PasteInput({ onCreateDeck }) {
             </div>
           </div>
 
+          <div className="form-group deck-notes-field">
+            <label className="form-label" htmlFor="deck-notes">Notes for people you share this deck with</label>
+            <textarea id="deck-notes" className="sketch-textarea" rows={3} maxLength={1000} placeholder="Optional: add context, study instructions, or what this deck covers." value={notes} onChange={(event) => setNotes(event.target.value)} />
+            <span className="timer-hint">{notes.length}/1000</span>
+          </div>
+
           {/* Timer settings */}
           <div className="timer-settings-row">
             <label className="form-label">
@@ -167,6 +175,10 @@ export default function PasteInput({ onCreateDeck }) {
               />
               <span className="timer-hint">seconds (5–300)</span>
             </div>
+            <label className="answer-label-toggle" htmlFor="paste-answer-labels">
+              <input id="paste-answer-labels" type="checkbox" checked={showAnswerLabels} onChange={(event) => setShowAnswerLabels(event.target.checked)} />
+              <span><strong>Show A/B/C/D during the quiz</strong><small>Off by default. Answers still shuffle either way.</small></span>
+            </label>
           </div>
 
           <label className="form-label" style={{ marginTop: 16 }}>
@@ -201,6 +213,7 @@ export default function PasteInput({ onCreateDeck }) {
               <i className="bx bx-check-shield" /> Found {preview.length} Questions!
             </h2>
             <span className="preview-badge">{title}</span>
+            <span className="preview-badge">{showAnswerLabels ? 'Quiz labels on' : 'Quiz labels hidden'}</span>
           </div>
 
           <div className="preview-list">
@@ -250,6 +263,12 @@ export default function PasteInput({ onCreateDeck }) {
           padding: 32px 20px 60px;
           width: 100%;
         }
+        .deck-notes-field { margin-top:16px; }
+        .deck-notes-field .timer-hint { display:block; text-align:right; }
+        .answer-label-toggle { margin-top:14px; display:flex; gap:10px; align-items:flex-start; cursor:pointer; font-family:var(--font-display); }
+        .answer-label-toggle input { margin-top:4px; }
+        .answer-label-toggle span { display:grid; gap:2px; }
+        .answer-label-toggle small { color:var(--ink-faded); font-family:var(--font-body); }
 
         /* Sticky notes */
         .sticky-notes-row {

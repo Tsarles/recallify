@@ -14,6 +14,7 @@ export default function QuizCard({
   onExpire,
   revealed,
   timerSeconds = 20,
+  showAnswerLabels = false,
 }) {
   const [chosen, setChosen] = useState(null);
   const [locked, setLocked] = useState(false);
@@ -101,6 +102,7 @@ export default function QuizCard({
               onClick={() => handleChoose(opt.id)}
               disabled={locked}
             >
+              {showAnswerLabels && <span className="opt-label">{String.fromCharCode(65 + optionIndex)}.</span>}
               <span className="opt-text">{opt.text}</span>
               {state === 'correct' && <i className="bx bxs-check-circle opt-icon" />}
               {state === 'wrong'   && <i className="bx bxs-x-circle opt-icon" />}
@@ -214,6 +216,7 @@ function CardStyles() {
       }
 
       .opt-text { flex: 1; line-height: 1.4; }
+      .opt-label { align-self:flex-start; font-family:var(--font-display); font-weight:700; min-width:20px; }
 
       .opt-icon {
         font-size: 1.2rem;

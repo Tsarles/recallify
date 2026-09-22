@@ -1,43 +1,37 @@
-/**
- * counter.js — Shared counters via CounterAPI (free, no signup)
- * Docs: https://api.counterapi.dev
- *
- * Namespace: recallify-tsarles2026 (unique to this app)
- * Keys: 'hearts', 'visitors'
- *
- * Each counter auto-creates on first hit.
- * CORS-enabled, works from browser.
- */
+import { supabase } from '../lib/supabase';
 
-const NS   = 'recallify-tsarles2026';
-const BASE = 'https://api.counterapi.dev/v1';
+const VISIT_DAY_KEY = 'recallify_visit_day';
+const VALID_STATS = new Set(['hearts', 'visitors']);
 
-/**
- * Get current count for a key (read-only, no increment).
- * Returns 0 on network error.
- */
-export async function getCount(key) {
-  try {
-    const res = await fetch(`${BASE}/${NS}/${key}`);
-    if (!res.ok) return 0;
-    const data = await res.json();
-    return data.count ?? 0;
-  } catch {
-    return 0;
-  }
+function requireStat(key) {
+  if (!VALID_STATS.has(key)) throw new Error('Unsupported site statistic.');
 }
 
-/**
- * Increment a counter by 1 and return the new value.
- * Returns null on network error (caller should ignore silently).
- */
+export async function getCount(key) {
+  requireStat(key);
+  if (!supabase) return 0;
+  const { data, error } = await supabase
+    .from('site_stats')
+    .select('count')
+    .eq('key', key)
+    .maybeSingle();
+  if (error) throw error;
+  return Number(data?.count || 0);
+}
+
 export async function incrementCount(key) {
-  try {
-    const res = await fetch(`${BASE}/${NS}/${key}/up`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.count ?? null;
-  } catch {
-    return null;
-  }
+  requireStat(key);
+  if (!supabase) return null;
+  const { data, error } = await supabase.rpc('increment_site_stat', { stat_name: key });
+  if (error) throw error;
+  return Number(data || 0);
+}
+
+export function shouldCountVisit() {
+  const today = new Date().toISOString().slice(0, 10);
+  return localStorage.getItem(VISIT_DAY_KEY) !== today;
+}
+
+export function markVisitCounted() {
+  localStorage.setItem(VISIT_DAY_KEY, new Date().toISOString().slice(0, 10));
 }

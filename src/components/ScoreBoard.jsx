@@ -1,6 +1,7 @@
+import { getQuizProgress } from '../utils/progress';
+
 export default function ScoreBoard({ score, wrong, total }) {
-  const answered = score + wrong;
-  const pct      = total > 0 ? Math.round((score / total) * 100) : 0;
+  const { answered, remaining, progressPct, accuracyPct } = getQuizProgress(score, wrong, total);
 
   return (
     <div className="scoreboard">
@@ -22,16 +23,15 @@ export default function ScoreBoard({ score, wrong, total }) {
 
       <div className="score-item score-remain">
         <i className="bx bx-card" />
-        <span className="score-num">{total - answered}</span>
+        <span className="score-num">{remaining}</span>
         <span className="score-label">Left</span>
       </div>
 
       <div className="score-pct-wrap">
-        <div
-          className="score-pct-bar"
-          style={{ width: `${pct}%` }}
-        />
-        <span className="score-pct-label">{pct}%</span>
+        <div className="score-pct-track" role="progressbar" aria-label="Quiz progress" aria-valuemin="0" aria-valuemax={total} aria-valuenow={answered}>
+          <div className="score-pct-bar" style={{ width: `${progressPct}%` }} />
+        </div>
+        <span className="score-pct-label">{answered}/{total} · {accuracyPct}% correct</span>
       </div>
 
       <style>{`
@@ -89,11 +89,18 @@ export default function ScoreBoard({ score, wrong, total }) {
           margin-left: auto;
         }
 
+        .score-pct-track {
+          width: 120px;
+          height: 10px;
+          background: var(--paper-cream);
+          border: 1.5px solid var(--ink);
+          border-radius: 999px;
+          overflow: hidden;
+        }
+
         .score-pct-bar {
-          height: 8px;
-          min-width: 4px;
-          max-width: 120px;
-          background: var(--correct);
+          height: 100%;
+          background: var(--purple);
           border-radius: 999px;
           transition: width 0.5s ease;
         }
@@ -102,7 +109,14 @@ export default function ScoreBoard({ score, wrong, total }) {
           font-family: var(--font-sketch);
           font-size: 0.95rem;
           color: var(--ink-faded);
-          min-width: 36px;
+          min-width: 112px;
+        }
+
+        @media (max-width: 560px) {
+          .scoreboard { gap:10px; padding:10px 12px; }
+          .score-divider { display:none; }
+          .score-pct-wrap { width:100%; margin-left:0; }
+          .score-pct-track { flex:1; }
         }
       `}</style>
     </div>

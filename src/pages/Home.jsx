@@ -9,11 +9,12 @@ import Archive     from './Archive';
 import SuggestionModal from '../components/SuggestionModal';
 import AuthModal from '../components/AuthModal';
 import SharedDeck from './SharedDeck';
+import Profile from './Profile';
 import { supabase } from '../lib/supabase';
 import { createDeck, listDecks } from '../utils/decks';
 
 export default function Home() {
-  // view: 'landing' | 'decks' | 'paste' | 'quiz' | 'archive'
+  // view: 'landing' | 'decks' | 'paste' | 'quiz' | 'archive' | 'profile'
   const [view,        setView]       = useState('landing');
   const [activeDeck,  setActiveDeck] = useState(null);
   const [quizMode,    setQuizMode]   = useState('quiz');
@@ -28,7 +29,11 @@ export default function Home() {
   useEffect(() => {
     if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user || null));
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user || null));
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      const nextUser = session?.user || null;
+      setUser(nextUser);
+      if (!nextUser) setView((current) => current === 'profile' ? 'decks' : current);
+    });
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -44,7 +49,7 @@ export default function Home() {
       await createDeck(deckData, user?.id);
       const count = (await listDecks(user?.id)).length;
       setDataVersion((version) => version + 1);
-      showToast(`Saved! "${deckData.title}" — ${count}/5 decks used.`);
+      showToast(`Saved! "${deckData.title}" — ${count}/7 decks used.`);
       setView('decks');
     } catch (e) {
       showToast(`Error: ${e.message}`);
@@ -131,6 +136,10 @@ export default function Home() {
 
         {view === 'archive' && (
           <Archive onShowToast={showToast} userId={user?.id} refreshKey={dataVersion} />
+        )}
+
+        {view === 'profile' && user && (
+          <Profile user={user} onBack={() => setView('decks')} onToast={showToast} />
         )}
       </main>
 

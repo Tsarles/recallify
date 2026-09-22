@@ -1,6 +1,7 @@
 import { archiveDeck, getShareUrl, listDecks, removeDeck, updateDeck } from '../utils/decks';
 import { useState, useRef, useEffect } from 'react';
 import gsap from 'gsap';
+import { shuffleCopy } from '../utils/shuffle';
 
 const DECK_COLORS = [
   { bg: 'var(--yellow-bg)', border: 'var(--yellow)', icon: 'bxs-book' },
@@ -22,6 +23,7 @@ const TIMER_PRESETS = [
 // ── Settings Modal ────────────────────────────────────────────
 function SettingsModal({ deck, onClose, onSave }) {
   const [timer, setTimer] = useState(deck.timerSeconds || 20);
+  const [showAnswerLabels, setShowAnswerLabels] = useState(Boolean(deck.showAnswerLabels));
   const [custom, setCustom] = useState('');
   const [useCustom, setUseCustom] = useState(false);
   const overlayRef = useRef(null);
@@ -38,7 +40,7 @@ function SettingsModal({ deck, onClose, onSave }) {
   const handleSave = () => {
     const val = useCustom ? parseInt(custom, 10) : timer;
     if (!val || val < 5 || val > 300) return;
-    onSave({ timerSeconds: val });
+    onSave({ timerSeconds: val, showAnswerLabels });
     handleClose();
   };
 
@@ -50,8 +52,8 @@ function SettingsModal({ deck, onClose, onSave }) {
   return (
     <div ref={overlayRef} className="modal-overlay" onClick={e => e.target === overlayRef.current && handleClose()}>
       <div ref={cardRef} className="settings-modal sketch-card">
-        <button className="modal-close-btn" onClick={handleClose}><i className="bx bx-x" /></button>
-        <div className="settings-pin">⚙️</div>
+        <button type="button" className="modal-close-btn" onClick={handleClose} aria-label="Close deck settings"><i className="bx bx-x" /></button>
+        <i className="bx bx-cog settings-pin" />
         <h3 className="settings-title">Deck Settings</h3>
         <p className="settings-deck-name">{deck.title}</p>
 
@@ -90,6 +92,11 @@ function SettingsModal({ deck, onClose, onSave }) {
           </div>
         </div>
 
+        <label className="settings-toggle" htmlFor="settings-answer-labels">
+          <input id="settings-answer-labels" type="checkbox" checked={showAnswerLabels} onChange={(event) => setShowAnswerLabels(event.target.checked)} />
+          <span><strong>Show A/B/C/D in quizzes</strong><small>Off keeps the quiz focused on answer text.</small></span>
+        </label>
+
         <div className="settings-actions">
           <button className="btn-sketch primary" onClick={handleSave}>
             <i className="bx bxs-save" /> Save Settings
@@ -113,16 +120,6 @@ function SettingsModal({ deck, onClose, onSave }) {
           font-size: 1.5rem;
           filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
         }
-        .modal-close-btn {
-          position: absolute;
-          top: 10px; right: 10px;
-          background: rgba(0,0,0,0.08);
-          border: none; border-radius: 50%;
-          width: 30px; height: 30px;
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer; font-size: 1.1rem; color: var(--ink);
-        }
-        .modal-close-btn:hover { background: rgba(0,0,0,0.16); }
         .settings-title {
           font-size: 1.4rem;
           margin-bottom: 4px;
@@ -186,6 +183,10 @@ function SettingsModal({ deck, onClose, onSave }) {
           flex-wrap: wrap;
           margin-top: 4px;
         }
+        .settings-toggle { display:flex; gap:10px; align-items:flex-start; margin-bottom:20px; cursor:pointer; font-family:var(--font-display); }
+        .settings-toggle input { margin-top:4px; }
+        .settings-toggle span { display:grid; gap:2px; }
+        .settings-toggle small { color:var(--ink-faded); font-family:var(--font-body); }
       `}</style>
     </div>
   );
@@ -195,6 +196,9 @@ function SettingsModal({ deck, onClose, onSave }) {
 function EditModal({ deck, onClose, onSave }) {
   const [title,   setTitle]   = useState(deck.title);
   const [subject, setSubject] = useState(deck.subject || '');
+  const [notes, setNotes] = useState(deck.notes || '');
+  const [cards, setCards] = useState(() => deck.cards.map((card) => ({ ...card, options: (card.options || []).map((option) => ({ ...option })) })));
+  const [error, setError] = useState('');
   const overlayRef = useRef(null);
   const cardRef    = useRef(null);
 
@@ -208,9 +212,27 @@ function EditModal({ deck, onClose, onSave }) {
 
   const handleSave = () => {
     if (!title.trim()) return;
-    onSave({ title: title.trim(), subject: subject.trim() });
+    if (cards.length === 0) return setError('A deck needs at least one question.');
+    if (cards.some((card) => !card.question.trim() || !card.answerId || (card.type === 'multiple-choice' && card.options.some((option) => !option.text.trim())))) {
+      setError('Every question, answer, and option needs text before saving.');
+      return;
+    }
+    onSave({ title: title.trim(), subject: subject.trim(), notes: notes.trim(), cards });
     handleClose();
   };
+
+  const updateCard = (index, patch) => setCards((current) => current.map((card, cardIndex) => cardIndex === index ? { ...card, ...patch } : card));
+  const updateOption = (cardIndex, optionIndex, text) => setCards((current) => current.map((card, index) => index === cardIndex ? {
+    ...card,
+    options: card.options.map((option, currentOptionIndex) => currentOptionIndex === optionIndex ? { ...option, text } : option),
+  } : card));
+  const removeCard = (cardIndex) => setCards((current) => current.filter((_, index) => index !== cardIndex));
+  const addQuestion = () => setCards((current) => [...current, {
+    type: 'multiple-choice',
+    question: 'New question?',
+    options: ['A', 'B', 'C', 'D'].map((id) => ({ id, text: '' })),
+    answerId: 'A',
+  }]);
 
   const handleClose = () => {
     gsap.to(cardRef.current, { opacity: 0, scale: 0.88, y: 12, duration: 0.18, ease: 'power2.in' });
@@ -220,8 +242,8 @@ function EditModal({ deck, onClose, onSave }) {
   return (
     <div ref={overlayRef} className="modal-overlay" onClick={e => e.target === overlayRef.current && handleClose()}>
       <div ref={cardRef} className="edit-modal sketch-card">
-        <button className="modal-close-btn" onClick={handleClose}><i className="bx bx-x" /></button>
-        <div className="settings-pin">✏️</div>
+        <button type="button" className="modal-close-btn" onClick={handleClose} aria-label="Close deck editor"><i className="bx bx-x" /></button>
+        <i className="bx bx-pencil settings-pin" />
         <h3 className="settings-title">Edit Deck</h3>
 
         <div className="edit-form">
@@ -243,7 +265,37 @@ function EditModal({ deck, onClose, onSave }) {
               placeholder="e.g. Chemistry, History…"
             />
           </div>
+          <div className="form-group-row">
+            <label className="settings-label">Shared deck notes</label>
+            <textarea className="sketch-textarea" rows={3} maxLength={1000} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Context or study instructions for anyone opening the shared deck." />
+            <span className="edit-count">{notes.length}/1000</span>
+          </div>
+
+          <div className="question-editor-list">
+            <h4><i className="bx bx-edit" /> Quiz questions</h4>
+            {cards.map((card, cardIndex) => (
+              <section className="question-editor" key={`${cardIndex}-${card.type}`}>
+                <div className="question-editor-heading"><label className="settings-label">Question {cardIndex + 1}</label><button type="button" className="question-remove" onClick={() => removeCard(cardIndex)}><i className="bx bx-trash" /> Remove</button></div>
+                <textarea className="sketch-textarea" rows={2} value={card.question} onChange={(event) => updateCard(cardIndex, { question: event.target.value })} />
+                {card.type === 'multiple-choice' ? (
+                  <>
+                    <div className="option-editor-grid">
+                      {card.options.map((option, optionIndex) => (
+                        <label key={option.id}><span>{option.id}</span><input className="sketch-input" value={option.text} onChange={(event) => updateOption(cardIndex, optionIndex, event.target.value)} /></label>
+                      ))}
+                    </div>
+                    <label className="correct-answer-field">Correct answer<select className="sketch-input" value={card.answerId} onChange={(event) => updateCard(cardIndex, { answerId: event.target.value })}>{card.options.map((option) => <option key={option.id} value={option.id}>{option.id}. {option.text || 'Untitled option'}</option>)}</select></label>
+                  </>
+                ) : (
+                  <label className="correct-answer-field">Answer<input className="sketch-input" value={card.answerId || ''} onChange={(event) => updateCard(cardIndex, { answerId: event.target.value })} /></label>
+                )}
+              </section>
+            ))}
+            <button type="button" className="btn-sketch" onClick={addQuestion}><i className="bx bx-plus" /> Add Question</button>
+          </div>
         </div>
+
+        {error && <p className="edit-error" role="alert">{error}</p>}
 
         <div className="settings-actions" style={{ marginTop: 20 }}>
           <button className="btn-sketch primary" onClick={handleSave} disabled={!title.trim()}>
@@ -255,13 +307,27 @@ function EditModal({ deck, onClose, onSave }) {
 
       <style>{`
         .edit-modal {
-          width: min(400px, 92vw);
+          width: min(760px, 94vw);
           padding: 40px 28px 28px;
           position: relative;
           background: var(--green-bg);
+          max-height: 90vh;
+          overflow-y: auto;
         }
         .edit-form { display: flex; flex-direction: column; gap: 14px; }
         .form-group-row { display: flex; flex-direction: column; gap: 6px; }
+        .edit-count { align-self:flex-end; color:var(--ink-faded); font-size:.8rem; }
+        .question-editor-list { display:grid; gap:14px; margin-top:8px; }
+        .question-editor-list h4 { font-size:1.05rem; }
+        .question-editor { display:grid; gap:10px; padding:16px; background:#fff; border:2px dashed var(--border); border-radius:12px; }
+        .question-editor-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+        .question-remove { border:0; background:transparent; color:var(--wrong); cursor:pointer; font:600 .82rem var(--font-display); }
+        .option-editor-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .option-editor-grid label { display:flex; gap:8px; align-items:center; font:700 .9rem var(--font-display); }
+        .option-editor-grid label span { width:20px; }
+        .correct-answer-field { display:grid; gap:6px; font:700 .9rem var(--font-display); }
+        .edit-error { color:var(--wrong); background:var(--wrong-bg); border:1px solid var(--wrong); border-radius:8px; padding:9px 11px; margin-top:14px; }
+        @media (max-width:600px) { .edit-modal { padding:36px 16px 20px; } .option-editor-grid { grid-template-columns:1fr; } }
       `}</style>
     </div>
   );
@@ -337,7 +403,7 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
 
   // Shuffle cards before starting quiz
   const handlePlay = (deck) => {
-    const shuffled = { ...deck, cards: [...deck.cards].sort(() => Math.random() - 0.5) };
+    const shuffled = { ...deck, cards: shuffleCopy(deck.cards) };
     onSelectDeck(shuffled, 'quiz');
   };
 
@@ -357,7 +423,7 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
     }
   };
 
-  const slotsLeft = 5 - decks.length;
+  const slotsLeft = 7 - decks.length;
 
   return (
     <div className="decklist-page inner-page-wrap">
@@ -367,10 +433,10 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
             <i className="bx bx-collection" /> My Decks
           </h2>
           <p className="decklist-sub">
-            {decks.length} / 5 decks used
+            {decks.length} / 7 decks used
           </p>
         </div>
-        {decks.length < 5 && (
+        {decks.length < 7 && (
           <button id="btn-add-deck" className="btn-sketch primary" onClick={onAddDeck}>
             <i className="bx bx-plus" /> New Deck
           </button>
@@ -469,6 +535,7 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
                   <p className="deck-timer-info">
                     <i className="bx bx-time" /> {deck.timerSeconds || 20}s per card
                   </p>
+                  {deck.notes && <p className="deck-notes-preview"><i className="bx bx-note" /> {deck.notes}</p>}
                   {lastRun && (
                     <p className="deck-last-score">
                       Last: {lastRun.score}/{lastRun.total} (
@@ -622,6 +689,7 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
           gap: 4px;
           margin-top: 3px;
         }
+        .deck-notes-preview { color:var(--ink-faded); font-size:.86rem; line-height:1.45; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
         .deck-last-score {
           font-size: 0.85rem;
           color: var(--correct);
