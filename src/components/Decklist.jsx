@@ -484,7 +484,7 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
                   </div>
                   {/* Action row */}
                   <div className="deck-top-actions">
-                    <button className="deck-icon-btn" onClick={() => handleShare(deck)} title={deck.isPublic ? 'Stop sharing' : 'Share deck'}>
+                    <button className="deck-icon-btn" onClick={() => handleShare(deck)} title={deck.isPublic ? 'Stop sharing' : 'Share deck'} aria-label={deck.isPublic ? `Stop sharing ${deck.title}` : `Share ${deck.title}`}>
                       <i className={`bx ${deck.isPublic ? 'bxs-share-alt' : 'bx-share-alt'}`} />
                     </button>
                     <button
@@ -492,6 +492,7 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
                       className="deck-icon-btn"
                       onClick={() => setSettingsDeck(deck)}
                       title="Settings"
+                      aria-label={`Settings for ${deck.title}`}
                     >
                       <i className="bx bx-cog" />
                     </button>
@@ -500,6 +501,7 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
                       className="deck-icon-btn"
                       onClick={() => setEditDeck(deck)}
                       title="Edit deck"
+                      aria-label={`Edit ${deck.title}`}
                     >
                       <i className="bx bx-pencil" />
                     </button>
@@ -508,6 +510,7 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
                       className="deck-icon-btn"
                       onClick={() => handleArchive(deck.id, deck.title)}
                       title="Archive deck"
+                      aria-label={`Archive ${deck.title}`}
                     >
                       <i className="bx bx-archive" />
                     </button>
@@ -516,6 +519,7 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
                       className="deck-icon-btn deck-icon-btn--danger"
                       onClick={() => setConfirm(deck.id)}
                       title="Delete deck"
+                      aria-label={`Delete ${deck.title}`}
                     >
                       <i className="bx bx-trash" />
                     </button>
