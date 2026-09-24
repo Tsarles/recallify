@@ -423,8 +423,6 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
     }
   };
 
-  const slotsLeft = 7 - decks.length;
-
   return (
     <div className="decklist-page inner-page-wrap">
       <div className="decklist-header">
@@ -479,51 +477,17 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
                 )}
 
                 <div className="deck-card-top">
-                  <div className="deck-icon-wrap">
-                    <i className={`bx ${color.icon} deck-icon`} />
-                  </div>
-                  {/* Action row */}
-                  <div className="deck-top-actions">
-                    <button className="deck-icon-btn" onClick={() => handleShare(deck)} title={deck.isPublic ? 'Stop sharing' : 'Share deck'} aria-label={deck.isPublic ? `Stop sharing ${deck.title}` : `Share ${deck.title}`}>
-                      <i className={`bx ${deck.isPublic ? 'bxs-share-alt' : 'bx-share-alt'}`} />
-                    </button>
-                    <button
-                      id={`btn-settings-${deck.id}`}
-                      className="deck-icon-btn"
-                      onClick={() => setSettingsDeck(deck)}
-                      title="Settings"
-                      aria-label={`Settings for ${deck.title}`}
-                    >
-                      <i className="bx bx-cog" />
-                    </button>
-                    <button
-                      id={`btn-edit-${deck.id}`}
-                      className="deck-icon-btn"
-                      onClick={() => setEditDeck(deck)}
-                      title="Edit deck"
-                      aria-label={`Edit ${deck.title}`}
-                    >
-                      <i className="bx bx-pencil" />
-                    </button>
-                    <button
-                      id={`btn-archive-${deck.id}`}
-                      className="deck-icon-btn"
-                      onClick={() => handleArchive(deck.id, deck.title)}
-                      title="Archive deck"
-                      aria-label={`Archive ${deck.title}`}
-                    >
-                      <i className="bx bx-archive" />
-                    </button>
-                    <button
-                      id={`btn-delete-${deck.id}`}
-                      className="deck-icon-btn deck-icon-btn--danger"
-                      onClick={() => setConfirm(deck.id)}
-                      title="Delete deck"
-                      aria-label={`Delete ${deck.title}`}
-                    >
-                      <i className="bx bx-trash" />
-                    </button>
-                  </div>
+                  <div className="deck-type"><span className="deck-icon-wrap"><i className={`bx ${color.icon} deck-icon`} /></span><span>{deck.sharedBy ? 'Saved deck' : 'My deck'}</span></div>
+                  <details className="deck-menu">
+                    <summary aria-label={`More actions for ${deck.title}`}><i className="bx bx-dots-horizontal-rounded" /></summary>
+                    <div className="deck-menu-panel">
+                      <button onClick={() => setEditDeck(deck)}><i className="bx bx-edit-alt" /> Edit deck</button>
+                      <button onClick={() => setSettingsDeck(deck)}><i className="bx bx-slider-alt" /> Quiz settings</button>
+                      <button onClick={() => handleShare(deck)}><i className={`bx ${deck.isPublic ? 'bx-lock' : 'bx-share-alt'}`} /> {deck.isPublic ? 'Stop sharing' : 'Share deck'}</button>
+                      <button onClick={() => handleArchive(deck.id, deck.title)}><i className="bx bx-archive" /> Archive</button>
+                      <button className="danger" onClick={() => setConfirm(deck.id)}><i className="bx bx-trash" /> Delete</button>
+                    </div>
+                  </details>
                 </div>
 
                 <div className="deck-info">
@@ -533,12 +497,8 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
                       <i className="bx bx-tag" /> {deck.subject}
                     </span>
                   )}
-                  <p className="deck-card-count">
-                    <i className="bx bx-card" /> {deck.cards.length} cards
-                  </p>
-                  <p className="deck-timer-info">
-                    <i className="bx bx-time" /> {deck.timerSeconds || 20}s per card
-                  </p>
+                  {deck.sharedBy && <div className="deck-shared-by"><i className="bx bx-user-pin" /><span>Shared by <strong>{deck.sharedBy.displayName || `@${deck.sharedBy.username}`}</strong>{deck.sharedBy.username && <small>@{deck.sharedBy.username}</small>}</span></div>}
+                  <div className="deck-meta"><span><i className="bx bx-card" /> {deck.cards.length} cards</span><span><i className="bx bx-time" /> {deck.timerSeconds || 20}s</span>{deck.isPublic && <span className="deck-public"><i className="bx bx-link" /> Shared</span>}</div>
                   {deck.notes && <p className="deck-notes-preview"><i className="bx bx-note" /> {deck.notes}</p>}
                   {lastRun && (
                     <p className="deck-last-score">
@@ -570,13 +530,13 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
             );
           })}
 
-          {/* Empty slots */}
-          {Array.from({ length: slotsLeft }).map((_, i) => (
-            <button key={`empty-${i}`} type="button" className="deck-card deck-card--empty" onClick={onAddDeck}>
+          {decks.length < 7 && (
+            <button type="button" className="deck-card deck-card--empty" onClick={onAddDeck}>
               <i className="bx bx-plus-circle empty-slot-icon" />
-              <span>Add Deck</span>
+              <span>Create another deck</span>
+              <small>{7 - decks.length} slot{7 - decks.length === 1 ? '' : 's'} remaining</small>
             </button>
-          ))}
+          )}
         </div>
       )}
 
@@ -637,13 +597,13 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
 
         /* Deck card */
         .deck-card {
-          padding: 20px;
-          background: var(--deck-bg, #fff);
+          padding: 0;
+          background: #fff;
           display: flex;
           flex-direction: column;
           gap: 12px;
           position: relative;
-          overflow: hidden;
+          overflow: visible;
           transition: transform 0.12s;
         }
         .deck-card:hover { transform: translateY(-3px); }
@@ -652,10 +612,15 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
           display: flex;
           align-items: center;
           justify-content: space-between;
+          padding:14px 16px;
+          background:var(--deck-bg, var(--paper));
+          border-bottom:1.5px solid var(--deck-border, var(--border));
         }
 
+        .deck-type { display:flex; align-items:center; gap:9px; color:var(--ink-light); font:700 .82rem var(--font-display); text-transform:uppercase; letter-spacing:.04em; }
+
         .deck-icon-wrap {
-          width: 44px; height: 44px;
+          width: 36px; height: 36px;
           border-radius: 10px;
           background: rgba(255,255,255,0.7);
           border: 2px solid var(--deck-border, var(--border));
@@ -663,29 +628,20 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
         }
         .deck-icon { font-size: 1.5rem; color: var(--ink); }
 
-        .deck-top-actions {
-          display: flex;
-          gap: 2px;
-        }
-        .deck-icon-btn {
-          background: transparent;
-          border: none;
-          cursor: pointer;
-          color: var(--ink-faded);
-          font-size: 1.05rem;
-          padding: 5px 6px;
-          border-radius: 6px;
-          transition: color 0.15s, background 0.15s;
-        }
-        .deck-icon-btn:hover { color: var(--ink); background: rgba(0,0,0,0.06); }
-        .deck-icon-btn--danger:hover { color: var(--wrong); background: var(--wrong-bg); }
+        .deck-menu { position:relative; }
+        .deck-menu summary { list-style:none; width:34px; height:34px; display:grid; place-items:center; border:1.5px solid var(--ink); border-radius:50%; background:#fff; cursor:pointer; font-size:1.2rem; }
+        .deck-menu summary::-webkit-details-marker { display:none; }
+        .deck-menu-panel { position:absolute; z-index:20; top:40px; right:0; width:175px; padding:6px; display:grid; gap:2px; background:#fff; border:2px solid var(--ink); border-radius:10px; box-shadow:4px 4px 0 var(--ink); }
+        .deck-menu-panel button { display:flex; align-items:center; gap:8px; width:100%; padding:8px 9px; border:0; border-radius:6px; background:transparent; color:var(--ink); cursor:pointer; font:600 .84rem var(--font-body); text-align:left; }
+        .deck-menu-panel button:hover { background:var(--paper-dark); }
+        .deck-menu-panel button.danger { color:var(--wrong); }
 
-        .deck-info { flex: 1; }
+        .deck-info { flex: 1; padding:16px 18px 6px; }
         .deck-name {
           font-size: 1.15rem;
           margin-bottom: 4px;
         }
-        .deck-subject, .deck-card-count, .deck-timer-info {
+        .deck-subject {
           font-size: 0.85rem;
           color: var(--ink-faded);
           display: flex;
@@ -693,6 +649,12 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
           gap: 4px;
           margin-top: 3px;
         }
+        .deck-meta { display:flex; flex-wrap:wrap; gap:7px 12px; margin-top:14px; padding-top:11px; border-top:1px dashed var(--border); color:var(--ink-faded); font-size:.82rem; }
+        .deck-meta span { display:flex; align-items:center; gap:4px; }
+        .deck-public { color:var(--correct); font-weight:700; }
+        .deck-shared-by { display:flex; align-items:flex-start; gap:7px; margin-top:12px; padding:9px 10px; border-radius:8px; background:var(--green-bg); color:var(--ink-light); font-size:.82rem; }
+        .deck-shared-by > span { display:grid; line-height:1.25; }
+        .deck-shared-by small { color:var(--ink-faded); }
         .deck-notes-preview { color:var(--ink-faded); font-size:.86rem; line-height:1.45; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
         .deck-last-score {
           font-size: 0.85rem;
@@ -708,6 +670,7 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
           display: flex;
           gap: 8px;
           flex-wrap: wrap;
+          padding:10px 18px 18px;
         }
         .deck-actions .btn-sketch {
           flex: 1;
@@ -730,7 +693,9 @@ export default function Decklist({ onSelectDeck, onAddDeck, onShowToast, userId,
           font-family: var(--font-display);
           font-size: 1rem;
           transition: border-color 0.2s, color 0.2s;
+          overflow:hidden;
         }
+        .deck-card--empty small { font:400 .8rem var(--font-body); }
         .deck-card--empty:hover { border-color: var(--purple); color: var(--purple); }
         .empty-slot-icon { font-size: 2rem; }
 

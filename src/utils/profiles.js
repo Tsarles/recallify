@@ -39,14 +39,26 @@ export async function getProfile(userId) {
   return data;
 }
 
+export async function getPublicProfile(userId) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('username, display_name, avatar_key')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export async function ensureProfile(user) {
   const existing = await getProfile(user.id);
   if (existing) return existing;
 
   const metadata = user.user_metadata || {};
   let username = normalizeUsername(metadata.username || user.email?.split('@')[0]);
+  let usernameConfirmed = Boolean(metadata.username && validateUsername(username));
   if (username.length < 3 || !(await isUsernameAvailable(username))) {
     username = `learner_${user.id.replaceAll('-', '').slice(0, 8)}`;
+    usernameConfirmed = false;
   }
 
   const profile = {
@@ -56,6 +68,7 @@ export async function ensureProfile(user) {
     bio: '',
     avatar_key: 'pencil',
     interests: [],
+    username_confirmed: usernameConfirmed,
   };
   const { data, error } = await supabase.from('profiles').insert(profile).select().single();
   if (error) throw error;
@@ -69,9 +82,45 @@ export async function updateProfile(userId, updates) {
     bio: updates.bio.trim().slice(0, 240),
     avatar_key: updates.avatarKey,
     interests: updates.interests.slice(0, 8),
+    username_confirmed: true,
     updated_at: new Date().toISOString(),
   };
   const { data, error } = await supabase.from('profiles').update(patch).eq('id', userId).select().single();
   if (error) throw error;
   return data;
+}
+
+export async function confirmUsername(userId, value) {
+  const username = normalizeUsername(value);
+  if (!validateUsername(username)) throw new Error('Username must be 3–24 lowercase letters, numbers, or underscores.');
+  if (!(await isUsernameAvailable(username, userId))) throw new Error('That username is already taken.');
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ username, username_confirmed: true, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+
+export async function signInWithIdentifier(identifier, password) {
+  const value = identifier.trim().toLowerCase();
+  if (value.includes('@')) {
+    return supabase.auth.signInWithPassword({ email: value, password });
+  }
+  const username = normalizeUsername(value);
+  if (!validateUsername(username)) throw new Error('Enter a valid username or email address.');
+
+  const { data, error } = await supabase.functions.invoke('username-login', {
+    body: { username, password },
+  });
+  if (error || !data?.access_token || !data?.refresh_token) {
+    throw new Error('Incorrect username or password.');
+  }
+  return supabase.auth.setSession({
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+  });
 }

@@ -61,7 +61,7 @@ export default function Profile({ user, onBack, onToast }) {
     <div className="profile-page inner-page-wrap">
       <div className="profile-heading-row">
         <button className="btn-sketch" onClick={onBack}><i className="bx bx-arrow-back" /> Back to Decks</button>
-        <span className="version-chip">Recallify V1.2</span>
+        <span className="version-chip">Recallify V1.2.1</span>
       </div>
       <form className="profile-sheet sketch-card" onSubmit={save}>
         <div className="profile-intro">

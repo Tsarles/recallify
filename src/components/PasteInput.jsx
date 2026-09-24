@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import gsap from 'gsap';
 import { parseQuizText } from '../utils/parser';
+import DeckGuideModal from './DeckGuideModal';
 
 const FORMAT_EXAMPLE = `1. What is the capital of France?
 A. London
@@ -36,6 +37,7 @@ export default function PasteInput({ onCreateDeck }) {
   const [useCustom, setUseCustom] = useState(false);
   const [error,   setError]   = useState('');
   const [preview, setPreview] = useState(null);
+  const [showGuide, setShowGuide] = useState(false);
   const pageRef = useRef(null);
 
   useEffect(() => {
@@ -43,20 +45,6 @@ export default function PasteInput({ onCreateDeck }) {
       gsap.fromTo(pageRef.current,
         { opacity: 0, y: 20 },
         { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }
-      );
-      // Animate sticky notes
-      const notes = pageRef.current.querySelectorAll('.sticky-note');
-      gsap.fromTo(notes,
-        { opacity: 0, y: 18, rotate: 0 },
-        { opacity: 1, y: 0, stagger: 0.08, duration: 0.45, ease: 'back.out(1.6)',
-          onComplete: () => {
-            // Restore their natural rotations after entrance
-            notes.forEach((n, i) => {
-              const rots = [-1.5, 1.2, -0.8];
-              gsap.to(n, { rotate: rots[i] || 0, duration: 0.25, ease: 'power2.out' });
-            });
-          }
-        }
       );
     }
   }, []);
@@ -66,7 +54,7 @@ export default function PasteInput({ onCreateDeck }) {
     if (!text.trim()) { setError('Please paste your quiz questions first!'); return; }
     if (!title.trim()) { setError('Give your deck a title!'); return; }
     const cards = parseQuizText(text);
-    if (cards.length === 0) { setError("Hmm, couldn't find any questions. Check the format on the sticky note!"); return; }
+    if (cards.length === 0) { setError("We couldn't find any questions. Open the formatting guide and compare your text with the example."); return; }
     setPreview(cards);
     gsap.fromTo('.preview-panel', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power3.out' });
   };
@@ -79,28 +67,9 @@ export default function PasteInput({ onCreateDeck }) {
 
   return (
     <div ref={pageRef} className="paste-page inner-page-wrap">
-      {/* ── Format sticky notes ────────────────────────────── */}
-      <div className="sticky-notes-row">
-        <div className="sticky-note yellow">
-          <div className="sticky-title"><i className="bx bx-info-circle" /> Format Guide</div>
-          <p>Paste quiz text from ChatGPT or any AI. Questions must end with <strong>?</strong></p>
-          <p style={{ marginTop: 6 }}>Mark the answer with:<br /><code>// correct answer C</code></p>
-        </div>
-
-        <div className="sticky-note green">
-          <div className="sticky-title"><i className="bx bx-check-circle" /> Supported</div>
-          <ul className="sticky-list">
-            <li>A. or A) style options</li>
-            <li>Numbered questions (1. or 1)</li>
-            <li>1 to 35+ questions at once</li>
-            <li>Identification cards (no A/B/C/D)</li>
-          </ul>
-        </div>
-
-        <div className="sticky-note blue">
-          <div className="sticky-title"><i className="bx bx-file" /> Example</div>
-          <pre className="sticky-pre">{FORMAT_EXAMPLE.slice(0, 120)}…</pre>
-        </div>
+      <div className="format-help-bar">
+        <div><i className="bx bx-book-open" /><span><strong>New to Recallify formatting?</strong><small>Read one clear, scrollable guide with an example and checklist.</small></span></div>
+        <button type="button" className="btn-sketch sm" onClick={() => setShowGuide(true)}><i className="bx bx-help-circle" /> Open Guide</button>
       </div>
 
       {/* ── Form ──────────────────────────────────────────── */}
@@ -256,6 +225,8 @@ export default function PasteInput({ onCreateDeck }) {
         </div>
       )}
 
+      {showGuide && <DeckGuideModal onClose={() => setShowGuide(false)} />}
+
       <style>{`
         .paste-page {
           max-width: 860px;
@@ -270,40 +241,11 @@ export default function PasteInput({ onCreateDeck }) {
         .answer-label-toggle span { display:grid; gap:2px; }
         .answer-label-toggle small { color:var(--ink-faded); font-family:var(--font-body); }
 
-        /* Sticky notes */
-        .sticky-notes-row {
-          display: flex;
-          gap: 18px;
-          margin-bottom: 32px;
-          flex-wrap: wrap;
-        }
-        .sticky-notes-row .sticky-note {
-          flex: 1 1 200px;
-          min-width: 180px;
-          font-size: 0.92rem;
-        }
-
-        .sticky-title {
-          font-family: var(--font-display);
-          font-size: 1.05rem;
-          font-weight: 700;
-          margin-bottom: 8px;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .sticky-list {
-          margin: 4px 0 0 0;
-          padding-left: 18px;
-          line-height: 1.7;
-        }
-        .sticky-pre {
-          font-size: 0.78rem;
-          margin: 0;
-          white-space: pre-wrap;
-          font-family: monospace;
-          line-height: 1.5;
-        }
+        .format-help-bar { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:22px; padding:14px 16px; border:2px solid var(--ink); border-radius:12px; background:var(--blue-bg); box-shadow:3px 3px 0 var(--ink); }
+        .format-help-bar > div { display:flex; align-items:center; gap:11px; }
+        .format-help-bar > div > i { font-size:1.7rem; }
+        .format-help-bar span { display:grid; line-height:1.35; }
+        .format-help-bar small { color:var(--ink-faded); }
 
         /* Form */
         .paste-form, .preview-panel {
@@ -489,6 +431,8 @@ export default function PasteInput({ onCreateDeck }) {
         }
 
         @media (max-width: 560px) {
+          .format-help-bar { align-items:stretch; flex-direction:column; }
+          .format-help-bar .btn-sketch { justify-content:center; }
           .paste-form, .preview-panel { padding: 20px 16px; }
           .paste-heading { font-size: 1.4rem; }
           .timer-settings-row { padding: 12px; }

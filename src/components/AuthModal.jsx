@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cloudEnabled, supabase } from '../lib/supabase';
 import { loadArchivedDecks, loadDecks } from '../utils/storage';
 import { migrateLocalDecks } from '../utils/decks';
-import { ensureProfile, isUsernameAvailable, normalizeUsername, validateUsername } from '../utils/profiles';
+import { confirmUsername, ensureProfile, isUsernameAvailable, normalizeUsername, signInWithIdentifier, validateUsername } from '../utils/profiles';
 
 export default function AuthModal({ user, onClose, onChanged, onToast }) {
   const [mode, setMode] = useState('login');
@@ -14,7 +14,20 @@ export default function AuthModal({ user, onClose, onChanged, onToast }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [confirmationSent, setConfirmationSent] = useState(false);
+  const [usernameSetup, setUsernameSetup] = useState(null);
   const localCount = loadDecks().length + loadArchivedDecks().length;
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    ensureProfile(user).then((profile) => {
+      if (active && !profile.username_confirmed) {
+        setUsername(profile.username.startsWith('learner_') ? '' : profile.username);
+        setUsernameSetup({ user, profile });
+      }
+    }).catch((profileError) => active && setError(profileError.message));
+    return () => { active = false; };
+  }, [user]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -35,20 +48,43 @@ export default function AuthModal({ user, onClose, onChanged, onToast }) {
         if (authError) throw authError;
         if (data.session && data.user) await ensureProfile(data.user);
         if (data.session) {
-          onToast('Account created. Welcome to Recallify V1.2.');
+          onToast('Account created. Welcome to Recallify V1.2.1.');
           onClose();
         } else {
           setConfirmationSent(true);
           onToast('Check your email to confirm your Recallify account.');
         }
       } else {
-        const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error: authError } = await signInWithIdentifier(email, password);
         if (authError) throw authError;
-        if (data.user) await ensureProfile(data.user);
+        if (data.user) {
+          const profile = await ensureProfile(data.user);
+          if (!profile.username_confirmed) {
+            setUsername(profile.username.startsWith('learner_') ? '' : profile.username);
+            setUsernameSetup({ user: data.user, profile });
+            return;
+          }
+        }
         onClose();
       }
     } catch (authError) {
       setError(authError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveUsername = async (event) => {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      await confirmUsername(usernameSetup.user.id, username);
+      onToast(`Username @${normalizeUsername(username)} is ready for your next sign-in.`);
+      onChanged?.();
+      onClose();
+    } catch (usernameError) {
+      setError(usernameError.message);
     } finally {
       setBusy(false);
     }
@@ -85,6 +121,18 @@ export default function AuthModal({ user, onClose, onChanged, onToast }) {
 
         {!cloudEnabled ? (
           <p className="auth-error">Cloud sync needs the Supabase environment variables from <code>.env.example</code>.</p>
+        ) : usernameSetup ? (
+          <form className="auth-stack username-setup" onSubmit={saveUsername}>
+            <div className="username-setup-icon"><i className="bx bx-id-card" /></div>
+            <div>
+              <p><strong>Choose your sign-in username</strong></p>
+              <p className="text-faded">Your email still handles confirmation and recovery. Once saved, you can use either your username or email next time.</p>
+            </div>
+            <label>Username<input autoFocus className="sketch-input" type="text" autoComplete="username" minLength="3" maxLength="24" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} placeholder="study_name" required /></label>
+            {error && <p className="auth-error" role="alert">{error}</p>}
+            <button className="btn-sketch primary" disabled={busy}>{busy ? 'Saving…' : 'Save Username'}</button>
+            <button type="button" className="auth-switch" onClick={onClose}>Not now — use email next time</button>
+          </form>
         ) : user ? (
           <div className="auth-stack">
             <p className="auth-email"><i className="bx bx-envelope" /> {user.email}</p>
@@ -111,7 +159,7 @@ export default function AuthModal({ user, onClose, onChanged, onToast }) {
                 <label>Display name<input className="sketch-input" type="text" autoComplete="name" maxLength="50" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" required /></label>
               </>
             )}
-            <label>Email<input className="sketch-input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
+            <label>{mode === 'login' ? 'Username or email' : 'Email'}<input className="sketch-input" type={mode === 'login' ? 'text' : 'email'} autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={mode === 'login' ? 'study_name or you@example.com' : 'you@example.com'} required /></label>
             <label>Password<input className="sketch-input" type="password" minLength="6" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
             {mode === 'signup' && <label>Confirm password<input className="sketch-input" type="password" minLength="6" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required /></label>}
             {error && <p className="auth-error" role="alert">{error}</p>}
@@ -134,6 +182,8 @@ export default function AuthModal({ user, onClose, onChanged, onToast }) {
           .auth-switch { border:0; background:none; color:var(--purple); cursor:pointer; text-decoration:underline; font:inherit; }
           .auth-confirmation { text-align:center; align-items:center; }
           .auth-confirmation > i { font-size:3rem; color:var(--purple); }
+          .username-setup { text-align:left; }
+          .username-setup-icon { width:52px; height:52px; display:grid; place-items:center; border:2px solid var(--ink); border-radius:14px; background:var(--yellow-bg); box-shadow:3px 3px 0 var(--ink); font-size:1.6rem; }
           @media (max-width:480px) { .auth-card { padding:28px 18px 20px; } }
         `}</style>
       </section>

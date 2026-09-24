@@ -32,10 +32,10 @@ export default function Landing({ onGetStarted }) {
   const [visitors, setVisitors]     = useState(null);
   const [hearted,  setLocalHearted] = useState(() => hasHearted());
   const [showSuggest, setShowSuggest] = useState(false);
-  const [showRelease, setShowRelease] = useState(() => localStorage.getItem('recallify_release_v1_2') !== 'seen');
+  const [showRelease, setShowRelease] = useState(() => localStorage.getItem('recallify_release_v1_2_1') !== 'seen');
 
   const dismissRelease = () => {
-    localStorage.setItem('recallify_release_v1_2', 'seen');
+    localStorage.setItem('recallify_release_v1_2_1', 'seen');
     setShowRelease(false);
   };
 
@@ -124,7 +124,7 @@ export default function Landing({ onGetStarted }) {
             Study as a guest or create an account to sync
           </div>
 
-          <div className="hero-version hero-anim-0">V1.2</div>
+          <div className="hero-version hero-anim-0">V1.2.1</div>
 
           {/* Title */}
           <h1 className="hero-title hero-anim-1">
@@ -319,10 +319,10 @@ D. Option four
       {showRelease && createPortal(
         <div className="modal-overlay release-overlay" onMouseDown={(event) => event.target === event.currentTarget && dismissRelease()}>
           <section className="release-note sticky-note yellow" role="dialog" aria-modal="true" aria-labelledby="release-title">
-            <button type="button" className="modal-close-btn" aria-label="Close V1.2 update note" onClick={dismissRelease}><i className="bx bx-x" /></button>
+            <button type="button" className="modal-close-btn" aria-label="Close V1.2.1 update note" onClick={dismissRelease}><i className="bx bx-x" /></button>
             <p className="release-kicker"><i className="bx bx-bell" /> Recallify update</p>
             <h2 id="release-title">Thank you for using Recallify</h2>
-            <p>This is V1.2. It includes account profiles, synced and shareable decks, deck notes, improved quiz editing, and answer-label controls.</p>
+            <p>This is V1.2.1. Shared decks now show who sent them, My Decks is cleaner, the creation guide is easier to follow, and accounts can sign in with a username or email.</p>
             <p>Programming and math equation support may come next. Images are still being explored because Recallify remains focused on a fast paste-quiz-and-study workflow.</p>
             <button className="btn-sketch primary" onClick={() => { dismissRelease(); onGetStarted(); }}>Start studying</button>
           </section>

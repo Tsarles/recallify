@@ -10,12 +10,18 @@ create table if not exists public.decks (
   is_public boolean not null default false,
   notes text not null default '' check (char_length(notes) <= 1000),
   show_answer_labels boolean not null default false,
+  source_owner_username text,
+  source_owner_display_name text,
+  source_owner_avatar_key text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 alter table public.decks add column if not exists notes text not null default '';
 alter table public.decks add column if not exists show_answer_labels boolean not null default false;
+alter table public.decks add column if not exists source_owner_username text;
+alter table public.decks add column if not exists source_owner_display_name text;
+alter table public.decks add column if not exists source_owner_avatar_key text;
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -24,10 +30,13 @@ create table if not exists public.profiles (
   bio text not null default '' check (char_length(bio) <= 240),
   avatar_key text not null default 'pencil' check (avatar_key in ('pencil', 'book', 'flask', 'planet', 'leaf', 'music', 'code', 'star')),
   interests text[] not null default '{}',
+  username_confirmed boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint profiles_interests_limit check (cardinality(interests) <= 8)
 );
+
+alter table public.profiles add column if not exists username_confirmed boolean not null default false;
 
 create table if not exists public.site_stats (
   key text primary key check (key in ('visitors', 'hearts')),

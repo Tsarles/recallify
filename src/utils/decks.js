@@ -15,6 +15,12 @@ const fromRow = (row) => ({
   archivedAt: row.archived_at,
   createdAt: row.created_at,
   isPublic: row.is_public,
+  ownerId: row.user_id,
+  sharedBy: row.source_owner_username ? {
+    username: row.source_owner_username,
+    displayName: row.source_owner_display_name,
+    avatarKey: row.source_owner_avatar_key || 'pencil',
+  } : null,
 });
 
 const toRow = (deck, userId) => ({
@@ -28,6 +34,9 @@ const toRow = (deck, userId) => ({
   history: deck.history || [],
   archived_at: deck.archivedAt || null,
   is_public: deck.isPublic || false,
+  source_owner_username: deck.sharedBy?.username || null,
+  source_owner_display_name: deck.sharedBy?.displayName || null,
+  source_owner_avatar_key: deck.sharedBy?.avatarKey || null,
 });
 
 function requireCloud() {
@@ -111,8 +120,19 @@ export async function getSharedDeck(id) {
   return fromRow(data);
 }
 
-export async function copySharedDeck(deck, userId) {
-  return createDeck({ ...deck, title: `${deck.title} (Copy)`, history: [], archivedAt: null, isPublic: false }, userId);
+export async function copySharedDeck(deck, userId, owner) {
+  return createDeck({
+    ...deck,
+    title: `${deck.title} (Copy)`,
+    history: [],
+    archivedAt: null,
+    isPublic: false,
+    sharedBy: owner ? {
+      username: owner.username,
+      displayName: owner.display_name,
+      avatarKey: owner.avatar_key,
+    } : null,
+  }, userId);
 }
 
 export const getShareUrl = (deckId) => `${window.location.origin}${window.location.pathname}?deck=${deckId}`;
